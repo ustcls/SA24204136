@@ -1,0 +1,17 @@
+Package: SA24204136
+Type: Package
+Title: Newton-Raphson and Fisher scoring algorithm of cauchy distribution
+Version: 1.0
+Date: 2024-12-03
+Author: Sheng Liu
+Maintainer: Sheng Liu <824586968@qq.com>
+Description: Several R and Rcpp functions of Newton-Raphson algorithm and Fisher scoring algorithm are included in this package.
+License: GPL (>= 2)
+Imports: Rcpp,DAAG,MASS,boot,bootstrap,microbenchmark,twosamples
+Suggests:knitr, rmarkdown
+LinkingTo: Rcpp
+RoxygenNote: 7.3.2
+Encoding: UTF-8
+VignetteBuilder: knitr
+URL: http://github.com/usctls/SA24204136
+BugReports: http://github.com/ustcls/SA24204136/issues

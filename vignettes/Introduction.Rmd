@@ -1,0 +1,164 @@
+---
+title: "Introduction to package"
+author: "SA24204136 S Liu"
+date: '2024-12-04'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Overview
+
+__SA24204136__ is a simple R package developed to use Newton-Raphson algorithm and Fisher scoring algorithm for cauchy distribution.The MLEs of most complex models are generally not explicitly expressed.At this point,numerical calculation  of MLEs is required.So we can consider Newton-Raphson algorithm and Fisher scoring algorithm.
+Two functions are considered, namely, _N_ (Using Newton-Raphson algorithm for cauchy($\theta$)) and _FS_ (Using Fisher Scoring algorithm for cauchy($\theta$)). For each function, both R and Rcpp versions are produced. Namely _NR_ and  _FSR_ for R and _NC_ and _FSC_ for C++.
+
+The source R code for _NR_ is as follows:
+
+```{r,eval=FALSE}
+NR<-function(x,theta,method){
+  if(method==1){
+    return(theta+sum(2*(x-theta)/(1+(x-theta)^2))/sum(2*(1-(x-theta)^2)/(1+(x-theta)^2)^2))
+  }
+  if(method==2){
+    t<-theta+sum(2*(x-theta)/(1+(x-theta)^2))/sum(2*(1-(x-theta)^2)/(1+(x-theta)^2)^2)
+    k<-1
+    theta<-theta
+    while(abs(theta-t)>1e-3){
+      theta<-t
+      t<-theta+sum(2*(x-theta)/(1+(x-theta)^2))/sum(2*(1-(x-theta)^2)/(1+(x-theta)^2)^2)
+      k<-k+1
+    }
+    return(t)
+  }
+  if(method!=1 && method !=2){
+    print("please input the correct method")
+  }
+}
+```
+
+The source Rcpp code for _NC_ is as follows:
+
+```{r,eval=FALSE}
+double NC(const NumericVector &x, double theta, int method) {
+  if (method == 1) {
+    return (theta + sum(2.0 * (x - theta) / (1.0 + pow(x - theta, 2))) / sum(2.0 * (1.0 - pow(x - theta, 2)) / pow(1.0 + pow(x - theta, 2), 2)));
+  } else if (method == 2) {
+    double t = theta + sum(2.0 * (x - theta) / (1.0 + pow(x - theta, 2))) / sum(2.0 * (1.0 - pow(x - theta, 2)) / pow(1.0 + pow(x - theta, 2), 2));
+    int k = 1;
+    while (std::abs(theta - t) > 1e-3) {
+      theta = t;
+     t = theta + sum(2.0 * (x - theta) / (1.0 + pow(x - theta, 2))) / sum(2.0 * (1.0 - pow(x - theta, 2)) / pow(1.0 + pow(x - theta, 2), 2));
+     k++;
+     if (k > 1000) {
+       Rcpp::Rcout << "error" << std::endl;
+       break;
+     }
+   }
+   return t;
+  }else{
+    Rcpp::Rcout << "please input the correct method" << std::endl;
+    return 0;
+ }
+}
+```
+
+The source R code for _FSR_ is as follows:
+
+```{r,eval=FALSE}
+FSR<-function(x,theta,method){
+  if(method==1){
+    return(theta+2*mean(2*(x-theta)/(1+(x-theta)^2)))
+  }
+  if(method==2){
+    t<-theta+2*mean(2*(x-theta)/(1+(x-theta)^2))
+    k<-1
+    theta<-theta
+    while(abs(theta-t)>1e-3){
+      theta<-t
+      t<-theta+2*mean(2*(x-theta)/(1+(x-theta)^2))
+      k<-k+1
+    }
+    return(t)
+  }
+  if(method!=1 && method !=2){
+    print("please input the correct method")
+  }
+}
+```
+
+The source Rcpp code for _FSC_ is as follows:
+
+```{r,eval=FALSE}
+double FSC(const NumericVector &x, double theta, int method) {
+  if (method == 1) {
+    return (theta + 2.0 * mean(2.0 * (x - theta) / (1.0 + pow(x - theta, 2))));
+  } else if (method == 2) {
+    double t = theta + 2.0 * mean(2.0 * (x - theta) / (1.0 +pow(x - theta, 2)));
+    int k = 1;
+    while (std::abs(theta - t) > 1e-3) {
+      theta = t;
+      t = theta + 2.0 * mean(2.0 * (x - theta) / (1.0 + pow(x - theta, 2)));
+      k++;
+      if (k > 1000) {
+        Rcpp::Rcout << "error" << std::endl;
+        break;
+      }
+    }
+    return t;
+  }else{
+    Rcpp::Rcout << "please input the correct method" << std::endl;
+    return 0;
+  }
+}
+```
+
+
+we can compare the result of one step iteration and multi-step iteration when using Newton-Raphson algorithm and Fisher scoring algorithm.
+
+R code:
+
+```{r}
+library(SA24204136)
+set.seed(1234)
+n<-1000
+theta<-1
+n1<-n2<-f1<-f2<-numeric(n)
+for(i in 1:n){
+  x<-rcauchy(n,location=1)
+  n1[i]<-NR(x,theta,1)
+  n2[i]<-NR(x,theta,2)
+  f1[i]<-FSR(x,theta,1)
+  f2[i]<-FSR(x,theta,2)
+}
+
+sdn1<-sqrt(sum((n1-mean(n1))^2)/(1000-1))
+sdn2<-sqrt(sum((n2-mean(n2))^2)/(1000-1))
+sdf1<-sqrt(sum((f1-mean(f1))^2)/(1000-1))
+sdf2<-sqrt(sum((f2-mean(f2))^2)/(1000-1))
+
+round(c(OnestepN_theta=mean(n1),OnestepN_sd=sdn1,MultistepN_theta=mean(n2),MultistepN_sd=sdn2,OnestepF_theta=mean(f1),OnestepF_sd=sdf1,MultistepF_theta=mean(f2),MultistepF_sd=sdf2),5)
+```
+
+Rcpp code:
+
+```{r}
+n1<-n2<-f1<-f2<-numeric(n)
+for(i in 1:n){
+  x<-rcauchy(n,location=1)
+  n1[i]<-NC(x,theta,1)
+  n2[i]<-NC(x,theta,2)
+  f1[i]<-FSC(x,theta,1)
+  f2[i]<-FSC(x,theta,2)
+}
+
+sdn1<-sqrt(sum((n1-mean(n1))^2)/(1000-1))
+sdn2<-sqrt(sum((n2-mean(n2))^2)/(1000-1))
+sdf1<-sqrt(sum((f1-mean(f1))^2)/(1000-1))
+sdf2<-sqrt(sum((f2-mean(f2))^2)/(1000-1))
+
+round(c(OnestepN_theta=mean(n1),OnestepN_sd=sdn1,MultistepN_theta=mean(n2),MultistepN_sd=sdn2,OnestepF_theta=mean(f1),OnestepF_sd=sdf1,MultistepF_theta=mean(f2),MultistepF_sd=sdf2),5)
+```
+
+The results of two algorithms are basically the same.The results of one step iteration and Multi-step iteration also show that when facing cauchy distribution,they don't have too much difference.
